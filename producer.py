@@ -1,33 +1,37 @@
-import csv
+import pandas as pd
 from kafka import KafkaProducer
+import json
 
-# Kafka Configuration
+# Kafka configuration
+bootstrap_servers = 'localhost:9092'  # Replace with your Kafka broker address
+topic = 'csv-data-topic'  # Kafka topic to produce messages to
+
+# Create a Kafka producer instance
 producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    client_id='csv-producer',
-    key_serializer=str.encode,  # Convert key to bytes
-    value_serializer=str.encode  # Convert message to bytes
+    bootstrap_servers=bootstrap_servers,
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')  # Serialize JSON to bytes
 )
+#df['Summary'] = df['Summary'].fillna('')
+# Function to send a row to Kafka
+def produce_row_to_kafka(row):
+    # Convert the row to a dictionary
+    row_dict = row.to_dict()
+    
+    # Send the JSON data to the Kafka topic
+    producer.send(topic, value=row_dict)
+    print(f"Produced: {row_dict}")
 
-topic = 'csv-data-topic'
+# Read the CSV file
+csv_file = 'reviews.csv'
+df = pd.read_csv(csv_file)
 
-# Function to handle delivery reports
-def on_send_success(record_metadata):
-    print(f"Message delivered to {record_metadata.topic} [{record_metadata.partition}]")
+# Iterate over each row in the DataFrame and produce to Kafka
+for index, row in df.iterrows():
+    produce_row_to_kafka(row)
 
-def on_send_error(excp):
-    print(f"Message delivery failed: {excp}")
 
-# Read CSV file and send data to Kafka
-with open('amazon.csv', 'r', encoding='utf-8') as csv_file:
-    csv_reader = csv.reader(csv_file)
-    headers = next(csv_reader)  # Read header row
+# Flush the producer to ensure all messages are sent
+producer.flush()
 
-    for row in csv_reader:
-        message = ','.join(row)
-        future = producer.send(topic, key=row[0], value=message)
-        future.add_callback(on_send_success)
-        future.add_errback(on_send_error)
-
-producer.flush()  # Flush after loop to optimize performance
-print("CSV data successfully sent to Kafka!")
+# Close the producer
+producer.close()
