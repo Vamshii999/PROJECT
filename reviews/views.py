@@ -1,3 +1,5 @@
+
+import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from pymongo import MongoClient
@@ -52,45 +54,51 @@ def get_product_details(request, product_name):
 @csrf_exempt
 def search_summaries(request):
     if request.method == 'POST':
-        product_name = request.body.get('product_name')
-        search_type = request.body.get('search_type')
-        search_query = request.body.get('search_query')
-        
-        # Fetch all reviews for the selected product
-        selected_product_reviews = collection.find({'product_name': product_name})
-        search_results = []
-        
-        if search_type == 'tag':
-            # Search by tag
-            for review in selected_product_reviews:
-                if search_query in review.get('tags', []):
-                    search_results.append(review['Summary'])
-        
-        elif search_type == 'keyword':
-            # Search by keyword in the summary
-            for review in selected_product_reviews:
-                if search_query in review['Summary']:
-                    search_results.append(review['Summary'])
-        
-        elif search_type == 'top_tag':
-            # Search by top tags
-            # Get the top tags for the product
-            tags = [tag for review in selected_product_reviews for tag in review.get('tags', [])]
-            tag_frequency = Counter(tags)
-            top_tags = dict(tag_frequency.most_common(10))
+        try:
+            # Parse the JSON body
+            data = json.loads(request.body)
+            product_name = data.get('product_name')
+            search_type = data.get('search_type')
+            search_query = data.get('search_query')
             
-            # Check if the search query is one of the top tags
-            if search_query in top_tags:
-                # If the search query is a top tag, gather summaries that contain this tag
+            # Fetch all reviews for the selected product
+            selected_product_reviews = collection.find({'product_name': product_name})
+            search_results = []
+            
+            if search_type == 'tag':
+                # Search by tag
                 for review in selected_product_reviews:
                     if search_query in review.get('tags', []):
                         search_results.append(review['Summary'])
+            
+            elif search_type == 'keyword':
+                # Search by keyword in the summary
+                for review in selected_product_reviews:
+                    if search_query in review['Summary']:
+                        search_results.append(review['Summary'])
+            
+            elif search_type == 'top_tag':
+                # Search by top tags
+                # Get the top tags for the product
+                tags = [tag for review in selected_product_reviews for tag in review.get('tags', [])]
+                tag_frequency = Counter(tags)
+                top_tags = dict(tag_frequency.most_common(10))
+                
+                # Check if the search query is one of the top tags
+                if search_query in top_tags:
+                    # If the search query is a top tag, gather summaries that contain this tag
+                    for review in selected_product_reviews:
+                        if search_query in review.get('tags', []):
+                            search_results.append(review['Summary'])
 
-        return JsonResponse({
-            'product_name': product_name,
-            'search_type': search_type,
-            'search_query': search_query,
-            'results': search_results,
-        })
+            return JsonResponse({
+                'product_name': product_name,
+                'search_type': search_type,
+                'search_query': search_query,
+                'results': search_results,
+            })
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
