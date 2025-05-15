@@ -1,5 +1,6 @@
 # PROJECT 
-=> Introduction  
+=> Introduction 
+
 The Real-Time Feed Ranking System is a robust and scalable solution designed to process, 
 analyze, and rank product reviews from Amazon in real-time. The system leverages a 
 combination of Apache Kafka, MongoDB, and Django to handle an extensive dataset 
@@ -13,6 +14,7 @@ and highly responsive platform where users can search and retrieve ranked review
 various parameters, such as keywords, product tags, and popular or trending tags.
 
 =>Project Objectives 
+
 The objective of this project is to develop a Real-Time Feed Ranking System that efficiently 
 processes and ranks product reviews to enhance user experience on e-commerce platforms. The 
 system aims to provide a scalable and efficient solution for searching, analyzing, and ranking 
